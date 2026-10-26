@@ -9,6 +9,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import sk.hutta.casnik.ui.theme.InteraktivnyCasnikTheme
@@ -20,8 +25,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             InteraktivnyCasnikTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
+                    PingScreen(
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
@@ -44,4 +48,19 @@ fun GreetingPreview() {
     InteraktivnyCasnikTheme {
         Greeting("Android")
     }
+}
+
+@Composable
+fun PingScreen(modifier: Modifier = Modifier) {
+    var text by remember { mutableStateOf("Pripájam sa") }
+
+    LaunchedEffect(Unit) {
+        text = try {
+            "Server odpovedal: " + serverApi.ping()
+        } catch (e: Exception) {
+            "Chyba: ${e.message}"
+        }
+    }
+
+    Text(text = text, modifier = modifier)
 }
