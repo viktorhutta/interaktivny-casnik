@@ -1,0 +1,26 @@
+### Menu pre hosťa
+GET http://localhost:8080/api/menu
+
+### Slanina nedostupná
+PUT http://localhost:8080/api/admin/ingredients/9
+Content-Type: application/json
+
+{"name": "slanina", "available": false}
+
+### Slanina opäť dostupná
+PUT http://localhost:8080/api/admin/ingredients/9
+Content-Type: application/json
+
+{"name": "slanina", "available": true}
+
+### Nová položka
+POST http://localhost:8080/api/admin/menu-items
+Content-Type: application/json
+
+{"categoryId": 2, "name": "Vyprážaný syr", "description": "hranolky, tatárska omáčka", "price": 9.50, "available": true, "ingredients": [{"ingredientId": 5, "type": "BASE", "removable": false, "extraPrice": null}]}
+
+### Chyba: záporná cena
+POST http://localhost:8080/api/admin/menu-items
+Content-Type: application/json
+
+{"categoryId": 2, "name": "Test", "description": "", "price": -1, "available": true, "ingredients": []}

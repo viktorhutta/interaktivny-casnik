@@ -24,7 +24,8 @@ class MenuItem(
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null,
 ) {
-    @OneToMany(mappedBy = "menuItem")
+    @OneToMany(mappedBy = "menuItem", cascade = [CascadeType.ALL], orphanRemoval = true)
+    @OrderBy("id")
     var ingredients: MutableList<MenuItemIngredient> = mutableListOf()
 }
 
