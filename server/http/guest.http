@@ -1,0 +1,29 @@
+### Priloženie telefónu k stolu 1
+POST http://localhost:8080/api/guest/session
+Content-Type: application/json
+
+{"tableId": 1, "token": "dev-token-stol-1"}
+
+### Zlý token
+POST http://localhost:8080/api/guest/session
+Content-Type: application/json
+
+{"tableId": 1, "token": "zly-token"}
+
+### Objednávka: 2× halušky bez slaniny, pizza so šampiňónmi, kofola
+POST http://localhost:8080/api/guest/accounts/1/orders
+Content-Type: application/json
+
+{"items": [{"menuItemId": 4, "quantity": 2, "removedIngredientIds": [9]}, {"menuItemId": 3, "quantity": 1, "addedIngredientIds": [14]}, {"menuItemId": 6, "quantity": 1}]}
+
+### Chyba: odobratie cesta z pizze
+POST http://localhost:8080/api/guest/accounts/1/orders
+Content-Type: application/json
+
+{"items": [{"menuItemId": 3, "quantity": 1, "removedIngredientIds": [11]}]}
+
+### Privolanie čašníka
+POST http://localhost:8080/api/guest/accounts/1/waiter-call
+
+### Účet
+GET http://localhost:8080/api/guest/accounts/1

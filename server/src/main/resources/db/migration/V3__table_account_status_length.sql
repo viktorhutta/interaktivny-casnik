@@ -1,0 +1,1 @@
+ALTER TABLE table_account ALTER COLUMN status TYPE varchar(30);
