@@ -1,0 +1,127 @@
+### Hosť: identifikácia stola 2
+POST http://localhost:8080/api/guest/session
+Content-Type: application/json
+
+{"tableId": 2, "token": "dev-token-stol-2"}
+
+> {% client.global.set("guestToken", response.body.token); %}
+
+### Hosť: účet (uloží id účtu)
+GET http://localhost:8080/api/guest/account
+Authorization: Bearer {{guestToken}}
+
+> {% client.global.set("accountId", response.body.id); %}
+
+### Hosť: objednávka (bryndzové halušky)
+POST http://localhost:8080/api/guest/account/orders
+Authorization: Bearer {{guestToken}}
+Content-Type: application/json
+
+{"items": [{"menuItemId": 4, "quantity": 1}]}
+
+> {% client.global.set("orderId", response.body.id); %}
+
+### Hosť: privolanie čašníka
+POST http://localhost:8080/api/guest/account/waiter-call
+Authorization: Bearer {{guestToken}}
+
+### Prihlásenie kuchyne
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{"username": "kuchyna", "password": "casnik2026"}
+
+> {% client.global.set("kitchenToken", response.body.token); %}
+
+### Prihlásenie čašníka
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{"username": "casnik", "password": "casnik2026"}
+
+> {% client.global.set("waiterToken", response.body.token); %}
+
+### Kuchyňa: zoznam – objednávka nepotvrdeného účtu v ňom nie je
+GET http://localhost:8080/api/kitchen/orders
+Authorization: Bearer {{kitchenToken}}
+
+### Kuchyňa: zmena stavu pred potvrdením účtu → 409
+POST http://localhost:8080/api/kitchen/orders/{{orderId}}/status
+Authorization: Bearer {{kitchenToken}}
+Content-Type: application/json
+
+{"status": "IN_PREPARATION"}
+
+### Čašník: prehľad stolov (uloží id privolania)
+GET http://localhost:8080/api/waiter/tables
+Authorization: Bearer {{waiterToken}}
+
+> {% client.global.set("waiterCallId", response.body.find(t => t.accountId == client.global.get("accountId")).waiterCallId); %}
+
+### Čašník: potvrdenie účtu
+POST http://localhost:8080/api/waiter/accounts/{{accountId}}/confirm
+Authorization: Bearer {{waiterToken}}
+
+### Čašník: druhé potvrdenie → 409
+POST http://localhost:8080/api/waiter/accounts/{{accountId}}/confirm
+Authorization: Bearer {{waiterToken}}
+
+### Kuchyňa: zoznam – objednávka už je v ňom
+GET http://localhost:8080/api/kitchen/orders
+Authorization: Bearer {{kitchenToken}}
+
+### Kuchyňa: preskočenie stavu (NEW → READY) → 409
+POST http://localhost:8080/api/kitchen/orders/{{orderId}}/status
+Authorization: Bearer {{kitchenToken}}
+Content-Type: application/json
+
+{"status": "READY"}
+
+### Kuchyňa: stav, ktorý nastavuje čašník → 403
+POST http://localhost:8080/api/kitchen/orders/{{orderId}}/status
+Authorization: Bearer {{kitchenToken}}
+Content-Type: application/json
+
+{"status": "DELIVERED"}
+
+### Kuchyňa: pripravuje sa
+POST http://localhost:8080/api/kitchen/orders/{{orderId}}/status
+Authorization: Bearer {{kitchenToken}}
+Content-Type: application/json
+
+{"status": "IN_PREPARATION"}
+
+### Kuchyňa: hotová
+POST http://localhost:8080/api/kitchen/orders/{{orderId}}/status
+Authorization: Bearer {{kitchenToken}}
+Content-Type: application/json
+
+{"status": "READY"}
+
+### Čašník: prehľad stolov – hotová objednávka v readyOrders
+GET http://localhost:8080/api/waiter/tables
+Authorization: Bearer {{waiterToken}}
+
+### Čašník: privolanie vybavené
+POST http://localhost:8080/api/waiter/waiter-calls/{{waiterCallId}}/resolve
+Authorization: Bearer {{waiterToken}}
+
+### Čašník: objednávka doručená
+POST http://localhost:8080/api/waiter/orders/{{orderId}}/delivered
+Authorization: Bearer {{waiterToken}}
+
+### Hosť: účet – história má štyri stavy
+GET http://localhost:8080/api/guest/account
+Authorization: Bearer {{guestToken}}
+
+### Čašník: zaplatené u čašníka – účet sa uzavrie
+POST http://localhost:8080/api/waiter/accounts/{{accountId}}/close
+Authorization: Bearer {{waiterToken}}
+
+### Hosť: uzavretý účet → 403
+GET http://localhost:8080/api/guest/account
+Authorization: Bearer {{guestToken}}
+
+### Čašník na adrese kuchyne → 403
+GET http://localhost:8080/api/kitchen/orders
+Authorization: Bearer {{waiterToken}}

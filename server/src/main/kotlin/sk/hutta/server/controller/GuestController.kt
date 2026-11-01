@@ -24,6 +24,3 @@ class GuestController(private val guestService: GuestService) {
     @PostMapping("/account/waiter-call")
     fun callWaiter(@AuthenticationPrincipal jwt: Jwt) = guestService.callWaiter(jwt.accountId())
 }
-
-// TokenService dáva do subject tokenu hosťa vždy id účtu stola.
-private fun Jwt.accountId() = subject!!.toLong()

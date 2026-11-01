@@ -1,0 +1,59 @@
+package sk.hutta.server.service
+
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import sk.hutta.server.dto.OrderDto
+import sk.hutta.server.dto.WaiterTableDto
+import sk.hutta.server.model.OrderStatus
+import sk.hutta.server.model.PaymentMethod
+import sk.hutta.server.model.TableAccountStatus
+import sk.hutta.server.repository.CustomerOrderRepository
+import sk.hutta.server.repository.TableAccountRepository
+import sk.hutta.server.repository.WaiterCallRepository
+import java.time.LocalDateTime
+
+@Service
+@Transactional
+class WaiterService(
+    private val tableAccountRepository: TableAccountRepository,
+    private val customerOrderRepository: CustomerOrderRepository,
+    private val waiterCallRepository: WaiterCallRepository,
+    private val orderStatusService: OrderStatusService,
+) {
+    // Z týchto údajov aplikácia poskladá kartu stola so zoznamom požiadaviek.
+    @Transactional(readOnly = true)
+    fun getTables() = tableAccountRepository.findForWaiter().map { account ->
+        val orders = customerOrderRepository.findByTableAccountOrderById(account).map { it.toDto() }
+        WaiterTableDto(
+            account.id!!, account.diningTable.label, account.status, account.paymentMethod,
+            orders.sumOf { it.total },
+            waiterCallRepository.findByTableAccountAndResolvedFalse(account)?.id,
+            orders.filter { it.status == OrderStatus.READY },
+        )
+    }
+
+    fun confirmAccount(accountId: Long) {
+        val account = tableAccountRepository.findWithLockById(accountId) ?: throw notFound()
+        if (account.status != TableAccountStatus.AWAITING_CONFIRMATION) throw conflict("Účet nečaká na potvrdenie")
+        account.status = TableAccountStatus.OPEN
+    }
+
+    // Otvorený účet uzatvára čašník pri hosťovi bez aplikácie, ktorý spôsob platby nevolí v aplikácii.
+    fun closeAccount(accountId: Long) {
+        val account = tableAccountRepository.findWithLockById(accountId) ?: throw notFound()
+        if (account.status != TableAccountStatus.OPEN && account.status != TableAccountStatus.AWAITING_PAYMENT) {
+            throw conflict("Účet nemožno uzavrieť")
+        }
+        account.status = TableAccountStatus.CLOSED
+        account.paymentMethod = PaymentMethod.AT_WAITER
+        account.closedAt = LocalDateTime.now()
+    }
+
+    fun resolveWaiterCall(callId: Long) {
+        waiterCallRepository.findById(callId).orElseThrow { notFound() }.resolved = true
+    }
+
+    // Čašník smie objednávku len označiť ako doručenú.
+    fun deliverOrder(orderId: Long, staffId: Long): OrderDto =
+        orderStatusService.changeStatus(orderId, OrderStatus.DELIVERED, staffId).toDto()
+}
