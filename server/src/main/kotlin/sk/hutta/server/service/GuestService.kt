@@ -5,6 +5,7 @@ import org.springframework.transaction.annotation.Transactional
 import sk.hutta.server.dto.*
 import sk.hutta.server.model.*
 import sk.hutta.server.repository.*
+import sk.hutta.server.security.TokenService
 import java.math.BigDecimal
 
 @Service
@@ -15,6 +16,7 @@ class GuestService(
     private val menuItemRepository: MenuItemRepository,
     private val customerOrderRepository: CustomerOrderRepository,
     private val waiterCallRepository: WaiterCallRepository,
+    private val tokenService: TokenService,
 ) {
     // Hosť sa pripojí k aktívnemu účtu stola, alebo sa založí nový a čaká na potvrdenie čašníkom.
     fun openSession(request: TableSessionRequest): TableSessionDto {
@@ -22,12 +24,13 @@ class GuestService(
         if (table == null || table.token != request.token) throw notFound()
         val account = tableAccountRepository.findByDiningTableAndStatusNot(table, TableAccountStatus.CLOSED)
             ?: tableAccountRepository.save(TableAccount(table, TableAccountStatus.AWAITING_CONFIRMATION))
-        return TableSessionDto(account.id!!, table.label, account.status)
+        return TableSessionDto(tokenService.createToken(account.id!!, "GUEST"), table.label, account.status)
     }
 
     @Transactional(readOnly = true)
     fun getAccount(accountId: Long): AccountDto {
         val account = tableAccountRepository.findById(accountId).orElseThrow { notFound() }
+        checkNotClosed(account)
         val orders = customerOrderRepository.findByTableAccountOrderById(account).map { it.toDto() }
         return AccountDto(
             account.id!!, account.diningTable.label, account.status,
@@ -39,6 +42,7 @@ class GuestService(
 
     fun createOrder(accountId: Long, request: OrderRequest): OrderDto {
         val account = tableAccountRepository.findWithLockById(accountId) ?: throw notFound()
+        checkNotClosed(account)
         if (account.status != TableAccountStatus.AWAITING_CONFIRMATION && account.status != TableAccountStatus.OPEN) {
             throw conflict("Účet už neprijíma objednávky")
         }
@@ -73,11 +77,16 @@ class GuestService(
     }
 
     fun callWaiter(accountId: Long) {
-        val account = tableAccountRepository.findById(accountId).orElseThrow { notFound() }
-        if (account.status == TableAccountStatus.CLOSED) throw conflict("Účet je uzavretý")
+        val account = tableAccountRepository.findWithLockById(accountId) ?: throw notFound()
+        checkNotClosed(account)
         if (!waiterCallRepository.existsByTableAccountAndResolvedFalse(account)) {
             waiterCallRepository.save(WaiterCall(account))
         }
+    }
+
+    // Token hosťa platí, len kým je jeho účet neuzavretý.
+    private fun checkNotClosed(account: TableAccount) {
+        if (account.status == TableAccountStatus.CLOSED) throw forbidden("Účet je uzavretý")
     }
 }
 

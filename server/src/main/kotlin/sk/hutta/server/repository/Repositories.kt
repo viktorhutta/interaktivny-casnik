@@ -33,4 +33,6 @@ interface CustomerOrderRepository : JpaRepository<CustomerOrder, Long> {
     fun findByTableAccountOrderById(tableAccount: TableAccount): List<CustomerOrder>
 }
 
-interface StaffUserRepository : JpaRepository<StaffUser, Long>
+interface StaffUserRepository : JpaRepository<StaffUser, Long> {
+    fun findByUsername(username: String): StaffUser?
+}

@@ -8,7 +8,7 @@ import java.time.LocalDateTime
 
 data class TableSessionRequest(val tableId: Long, val token: String)
 
-data class TableSessionDto(val accountId: Long, val tableLabel: String, val status: TableAccountStatus)
+data class TableSessionDto(val token: String, val tableLabel: String, val status: TableAccountStatus)
 
 data class OrderRequest(val items: List<OrderItemRequest>)
 
