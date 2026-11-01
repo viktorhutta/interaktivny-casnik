@@ -1,0 +1,102 @@
+### Prihlásenie správcu
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{"username": "spravca", "password": "casnik2026"}
+
+> {% client.global.set("adminToken", response.body.token); %}
+
+### Prihlásenie čašníka
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{"username": "casnik", "password": "casnik2026"}
+
+> {% client.global.set("waiterToken", response.body.token); %}
+
+### Správca: zoznam stolov s tokenmi
+GET http://localhost:8080/api/admin/dining-tables
+Authorization: Bearer {{adminToken}}
+
+### Správca: nový stôl (označenie s časom, aby sa dal súbor spustiť opakovane)
+POST http://localhost:8080/api/admin/dining-tables
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{"label": "Stôl {{$timestamp}}"}
+
+> {%
+    client.global.set("tableId", response.body.id);
+    client.global.set("tableLabel", response.body.label);
+    client.global.set("oldToken", response.body.token);
+%}
+
+### Správca: rovnaké označenie → 409
+POST http://localhost:8080/api/admin/dining-tables
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{"label": "{{tableLabel}}"}
+
+### Správca: pregenerovanie tokenu
+POST http://localhost:8080/api/admin/dining-tables/{{tableId}}/token
+Authorization: Bearer {{adminToken}}
+
+> {% client.global.set("tableToken", response.body.token); %}
+
+### Hosť: starý token už neplatí → 404
+POST http://localhost:8080/api/guest/session
+Content-Type: application/json
+
+{"tableId": {{tableId}}, "token": "{{oldToken}}"}
+
+### Čašník na adrese správcu → 403
+GET http://localhost:8080/api/admin/dining-tables
+Authorization: Bearer {{waiterToken}}
+
+### Čašník: stoly na výber (bez tokenov)
+GET http://localhost:8080/api/waiter/dining-tables
+Authorization: Bearer {{waiterToken}}
+
+### Čašník: objednávka za hosťa na stôl bez účtu – účet vznikne rovno otvorený
+POST http://localhost:8080/api/waiter/dining-tables/{{tableId}}/orders
+Authorization: Bearer {{waiterToken}}
+Content-Type: application/json
+
+{"items": [{"menuItemId": 4, "quantity": 2}]}
+
+### Čašník: prehľad stolov – nový stôl má otvorený účet (uloží id účtu)
+GET http://localhost:8080/api/waiter/tables
+Authorization: Bearer {{waiterToken}}
+
+> {% client.global.set("accountId", response.body.find(t => t.tableLabel === client.global.get("tableLabel")).accountId); %}
+
+### Čašník: prázdna objednávka → 400
+POST http://localhost:8080/api/waiter/dining-tables/{{tableId}}/orders
+Authorization: Bearer {{waiterToken}}
+Content-Type: application/json
+
+{"items": []}
+
+### Čašník: zaplatené u čašníka – účet sa uzavrie
+POST http://localhost:8080/api/waiter/accounts/{{accountId}}/close
+Authorization: Bearer {{waiterToken}}
+
+### Hosť: identifikácia stola novým tokenom – nový účet čaká na potvrdenie
+POST http://localhost:8080/api/guest/session
+Content-Type: application/json
+
+{"tableId": {{tableId}}, "token": "{{tableToken}}"}
+
+> {% client.global.set("guestToken", response.body.token); %}
+
+### Čašník: objednávka za hosťa – účet sa tým potvrdí
+POST http://localhost:8080/api/waiter/dining-tables/{{tableId}}/orders
+Authorization: Bearer {{waiterToken}}
+Content-Type: application/json
+
+{"items": [{"menuItemId": 6, "quantity": 1}]}
+
+### Hosť: účet je otvorený a vidí aj objednávku od čašníka
+GET http://localhost:8080/api/guest/account
+Authorization: Bearer {{guestToken}}

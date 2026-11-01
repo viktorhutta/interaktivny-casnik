@@ -20,9 +20,15 @@ interface MenuItemIngredientRepository : JpaRepository<MenuItemIngredient, Long>
 interface DiningTableRepository : JpaRepository<DiningTable, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     fun findWithLockById(id: Long): DiningTable?
+
+    fun findAllByOrderById(): List<DiningTable>
+    fun existsByLabel(label: String): Boolean
 }
 interface TableAccountRepository : JpaRepository<TableAccount, Long> {
     fun findByDiningTableAndStatusNot(diningTable: DiningTable, status: TableAccountStatus): TableAccount?
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    fun findWithLockByDiningTableAndStatusNot(diningTable: DiningTable, status: TableAccountStatus): TableAccount?
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     fun findWithLockById(id: Long): TableAccount?
