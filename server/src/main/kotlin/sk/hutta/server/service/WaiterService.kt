@@ -7,14 +7,12 @@ import sk.hutta.server.dto.OrderDto
 import sk.hutta.server.dto.OrderRequest
 import sk.hutta.server.dto.WaiterTableDto
 import sk.hutta.server.model.OrderStatus
-import sk.hutta.server.model.PaymentMethod
 import sk.hutta.server.model.TableAccount
 import sk.hutta.server.model.TableAccountStatus
 import sk.hutta.server.repository.CustomerOrderRepository
 import sk.hutta.server.repository.DiningTableRepository
 import sk.hutta.server.repository.TableAccountRepository
 import sk.hutta.server.repository.WaiterCallRepository
-import java.time.LocalDateTime
 
 @Service
 @Transactional
@@ -25,6 +23,7 @@ class WaiterService(
     private val waiterCallRepository: WaiterCallRepository,
     private val orderService: OrderService,
     private val orderStatusService: OrderStatusService,
+    private val paymentService: PaymentService,
 ) {
     // Z týchto údajov aplikácia poskladá kartu stola so zoznamom požiadaviek.
     @Transactional(readOnly = true)
@@ -57,16 +56,8 @@ class WaiterService(
         account.status = TableAccountStatus.OPEN
     }
 
-    // Otvorený účet uzatvára čašník pri hosťovi bez aplikácie, ktorý spôsob platby nevolí v aplikácii.
-    fun closeAccount(accountId: Long) {
-        val account = tableAccountRepository.findWithLockById(accountId) ?: throw notFound()
-        if (account.status != TableAccountStatus.OPEN && account.status != TableAccountStatus.AWAITING_PAYMENT) {
-            throw conflict("Účet nemožno uzavrieť")
-        }
-        account.status = TableAccountStatus.CLOSED
-        account.paymentMethod = PaymentMethod.AT_WAITER
-        account.closedAt = LocalDateTime.now()
-    }
+    // Zaplatené u čašníka. Ak hosť medzitým zaplatil kartou, účet sa uzavrie ako platba kartou.
+    fun closeAccount(accountId: Long) = paymentService.closeByWaiter(accountId)
 
     fun resolveWaiterCall(callId: Long) {
         waiterCallRepository.findById(callId).orElseThrow { notFound() }.resolved = true

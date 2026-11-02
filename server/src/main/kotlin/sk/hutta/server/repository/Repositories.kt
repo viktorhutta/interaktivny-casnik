@@ -33,6 +33,8 @@ interface TableAccountRepository : JpaRepository<TableAccount, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     fun findWithLockById(id: Long): TableAccount?
 
+    fun findByStatusAndGatewayPaymentIdNotNull(status: TableAccountStatus): List<TableAccount>
+
     // Čašník vidí neuzavreté účty a aj uzavreté, ktorým ešte ostala nedoručená objednávka.
     @Query("""
         select a from TableAccount a

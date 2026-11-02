@@ -1,2 +1,3 @@
 # údaje, ktoré sa nikdy nemajú dostať do gitu
 .env
+http-client.private.env.json

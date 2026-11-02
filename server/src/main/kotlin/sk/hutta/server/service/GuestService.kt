@@ -32,7 +32,7 @@ class GuestService(
         checkNotClosed(account)
         val orders = customerOrderRepository.findByTableAccountOrderById(account).map { it.toDto() }
         return AccountDto(
-            account.id!!, account.diningTable.label, account.status,
+            account.id!!, account.diningTable.label, account.status, account.paymentMethod,
             waiterCallRepository.existsByTableAccountAndResolvedFalse(account),
             orders.sumOf { it.total },
             orders,

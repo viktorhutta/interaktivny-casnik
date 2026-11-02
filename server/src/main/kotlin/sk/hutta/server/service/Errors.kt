@@ -8,3 +8,4 @@ fun unauthorized(message: String) = ResponseStatusException(HttpStatus.UNAUTHORI
 fun forbidden(message: String) = ResponseStatusException(HttpStatus.FORBIDDEN, message)
 fun notFound() = ResponseStatusException(HttpStatus.NOT_FOUND)
 fun conflict(message: String) = ResponseStatusException(HttpStatus.CONFLICT, message)
+fun badGateway(message: String) = ResponseStatusException(HttpStatus.BAD_GATEWAY, message)
